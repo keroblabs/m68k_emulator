@@ -1,0 +1,64 @@
+
+enum
+{
+    TMS_COLOUR_TRANSPARENT = 0,
+    TMS_COLOUR_BLACK,
+    TMS_COLOUR_MED_GREEN,
+    TMS_COLOUR_LT_GREEN,
+    TMS_COLOUR_DK_BLUE,
+    TMS_COLOUR_LT_BLUE,
+    TMS_COLOUR_DK_RED,
+    TMS_COLOUR_CYAN,
+    TMS_COLOUR_MED_RED,
+    TMS_COLOUR_LT_RED,
+    TMS_COLOUR_DK_YELLOW,
+    TMS_COLOUR_LT_YELLOW,
+    TMS_COLOUR_DK_GREEN,
+    TMS_COLOUR_MAGENTA,
+    TMS_COLOUR_GREY,
+    TMS_COLOUR_WHITE,
+};
+
+enum
+{
+    TMS_REG_0 = 0,
+    TMS_REG_1,
+    TMS_REG_2,
+    TMS_REG_3,
+    TMS_REG_4,
+    TMS_REG_5,
+    TMS_REG_6,
+    TMS_REG_7,
+    TMS_NUM_REGISTERS,
+    TMS_REG_NAME_TABLE        = TMS_REG_2,
+    TMS_REG_COLOR_TABLE       = TMS_REG_3,
+    TMS_REG_PATTERN_TABLE     = TMS_REG_4,
+    TMS_REG_SPRITE_ATTR_TABLE = TMS_REG_5,
+    TMS_REG_SPRITE_PATT_TABLE = TMS_REG_6,
+    TMS_REG_FG_BG_COLOR       = TMS_REG_7,
+};
+
+#define TMS_R0_MODE_GRAPHICS_I    0x00
+#define TMS_R0_MODE_GRAPHICS_II   0x02
+#define TMS_R0_MODE_MULTICOLOR    0x00
+#define TMS_R0_MODE_TEXT          0x00
+#define TMS_R0_EXT_VDP_ENABLE     0x01
+#define TMS_R0_EXT_VDP_DISABLE    0x00
+
+#define TMS_R1_RAM_16K            0x80
+#define TMS_R1_RAM_4K             0x00
+#define TMS_R1_DISP_BLANK         0x00
+#define TMS_R1_DISP_ACTIVE        0x40
+#define TMS_R1_INT_ENABLE         0x20
+#define TMS_R1_INT_DISABLE        0x00
+#define TMS_R1_MODE_GRAPHICS_I    0x00
+#define TMS_R1_MODE_GRAPHICS_II   0x00
+#define TMS_R1_MODE_MULTICOLOR    0x08
+#define TMS_R1_MODE_TEXT          0x10
+#define TMS_R1_SPRITE_8           0x00
+#define TMS_R1_SPRITE_16          0x02
+#define TMS_R1_SPRITE_MAG1        0x00
+#define TMS_R1_SPRITE_MAG2        0x01
+
+#define TMS9918_PIXELS_X        256
+#define TMS9918_PIXELS_Y        192

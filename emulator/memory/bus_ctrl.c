@@ -112,8 +112,8 @@ uint32_t bus_ctrl_change_endian(uint32_t input, uint8_t size)
 	while (size)
 	{
 		p_output[index_out] = p_input[index_in];
-		index_in--;
-		index_out++;
+		index_in++;
+		index_out--;
 		size--;
 	}
 
@@ -150,8 +150,11 @@ void bus_ctrl_execute_write(uint32_t address, uint32_t data, uint8_t size)
 	}
 	else if (io_ctrl_is_selected(address))
 	{
-		// perform IO access
-		uint32_t io_data = bus_ctrl_change_endian(data, size);
+		/*
+		 * I/O handlers exchange logical CPU values, not host byte-array
+		 * representations.  Keep the requested access width intact and let the
+		 * device model validate it.
+		 */
 		io_ctrl_write(address, data, size);
 	}
 	else if (memory_ctrl_upper_ram_is_selected(address))
@@ -177,9 +180,12 @@ uint32_t bus_ctrl_execute_read(uint32_t address, uint8_t size)
 	}
 	else if (io_ctrl_is_selected(address))
 	{
-		// perform IO access
-		uint32_t io_data = io_ctrl_read(address, size);
-		data = bus_ctrl_change_endian(io_data, size);
+		/*
+		 * As for writes, an I/O model returns the logical value observed by
+		 * the CPU.  Endian conversion belongs only at byte-array memory
+		 * boundaries.
+		 */
+		data = io_ctrl_read(address, size);
 	}
 	else if (memory_ctrl_upper_ram_is_selected(address))
 	{

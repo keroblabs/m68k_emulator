@@ -41,6 +41,11 @@ LDDEF = m68k.ld
 # List all default C defines here, like -D_DEBUG=1
 DEFS +=
 
+# Physical external data bus used for byte-wide memory-mapped peripherals.
+# 8 = MC68008 style; 16 = MC68000/MC68010 style with MC68681 on D0-D7/LDS.
+M68K_DATA_BUS_WIDTH ?= 8
+DEFS += -DM68K_DATA_BUS_WIDTH=$(M68K_DATA_BUS_WIDTH)
+
 # List all default ASM defines here, like -D_DEBUG=1
 ADEFS +=
 
@@ -76,6 +81,7 @@ SRC += ../boot/irq_handlers.c
 SRC += ../boot/start.c
 SRC += ../boot/syscalls.c
 
+SRC += ../hardware/m68681_driver.c
 SRC += ../hardware/uart_driver.c
 SRC += ../hardware/timer_driver.c
 SRC += ../hardware/vga_driver.c

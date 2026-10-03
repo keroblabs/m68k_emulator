@@ -14,6 +14,25 @@ add_definitions(-D_USE_SCREEN_HEIGHT=960)
 add_definitions(-DMAC_OS_EMULATOR)
 add_definitions(-D_USE_LINUX)
 
+# External board bus width is independent of the Musashi CPU core model.
+# 8  = MC68008-style external bus; byte-wide devices use sequential addresses.
+# 16 = MC68000/MC68010-style external bus; board_003 places 8-bit devices on D0-D7/LDS.
+set(M68K_DATA_BUS_WIDTH "8" CACHE STRING "External M68K data bus width (8 or 16)")
+set_property(CACHE M68K_DATA_BUS_WIDTH PROPERTY STRINGS 8 16)
+if(NOT M68K_DATA_BUS_WIDTH STREQUAL "8" AND NOT M68K_DATA_BUS_WIDTH STREQUAL "16")
+    message(FATAL_ERROR "M68K_DATA_BUS_WIDTH must be 8 or 16")
+endif()
+add_definitions(-DM68K_DATA_BUS_WIDTH=${M68K_DATA_BUS_WIDTH})
+
+# A 68008 uses the 68000 instruction/core model. Set this option to use
+# Musashi's 68010 core while retaining the separately-selected bus width.
+option(M68K_EMULATE_68010 "Use Musashi MC68010 CPU model" OFF)
+if(M68K_EMULATE_68010)
+    add_definitions(-DM68K_EMULATE_68010=1)
+else()
+    add_definitions(-DM68K_EMULATE_68010=0)
+endif()
+
 link_directories(       ~/Projects/GIT_Dev/SDL/build)
 
 include_directories(    ~/Projects/GIT_Dev/SDL/build/include
@@ -64,6 +83,7 @@ set(                SOURCE_FILES
                     ./peripherals/display_emulator.c
                     ./peripherals/emulator_api.c
                     ./peripherals/keypad_emulator.c
+                    ./peripherals/m68681_emulator.c
                     ./peripherals/uart_emulator.c
                     ./peripherals/timer_emulator.c
                     ./peripherals/vdp9918_emulator.c

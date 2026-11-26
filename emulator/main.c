@@ -10,6 +10,9 @@
 #include "keypad_emulator.h"
 #include "m68681_emulator.h"
 #include "ym2149_emulator.h"
+#ifdef USE_KEYBOARD_MATRIX
+#include "keyboard_matrix_emulator.h"
+#endif
 
 #include "system_timer.h"
 
@@ -26,6 +29,7 @@
  * to Port A/B inputs so firmware can drive a value and sense it, exercising the
  * shared MC68681 port callback contract without needing dedicated host wiring.
  */
+#ifndef USE_KEYBOARD_MATRIX
 static uint8_t ym2149_gpio_loopback_value = 0x00;
 
 static uint8_t ym2149_gpio_read(void * p_data)
@@ -39,6 +43,7 @@ static void ym2149_gpio_write(void * p_data, uint8_t data)
     (void)p_data;
     ym2149_gpio_loopback_value = data;
 }
+#endif
 
 int main(int argc, char * argv[])
 {
@@ -61,14 +66,24 @@ int main(int argc, char * argv[])
     p_uart_debug  = m68681_emulator_get_channel(p_duart0, M68681_EMULATOR_CHANNEL_B);
     p_uart_port1  = m68681_emulator_get_channel(p_duart1, M68681_EMULATOR_CHANNEL_A);
 
-    keypad_emulator_init(window_id, p_uart_keypad);
-
     /* YM2149 PSG: GPIO is fully modeled; audio config is stored for later. */
     p_ym2149 = ym2149_emulator_init(YM2149_ADDR);
+
+#ifdef USE_KEYBOARD_MATRIX
+    (void)p_uart_keypad;
+    /*
+     * Scanned key matrix: YM2149 Port A drives the row decoder / column mux and
+     * the selected cell is sensed on MC68681 (device 0) IP5.
+     */
+    keyboard_matrix_emulator_init(p_ym2149, p_duart0);
+#else
+    keypad_emulator_init(window_id, p_uart_keypad);
+
     ym2149_emulator_set_port_callbacks(p_ym2149, YM2149_EMULATOR_PORT_A,
                                        ym2149_gpio_read, ym2149_gpio_write, NULL);
     ym2149_emulator_set_port_callbacks(p_ym2149, YM2149_EMULATOR_PORT_B,
                                        ym2149_gpio_read, ym2149_gpio_write, NULL);
+#endif
 
     /* Host time source feeding the MC68681 counter/timer emulation. */
     system_timer_init();

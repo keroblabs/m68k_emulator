@@ -2,6 +2,9 @@
 #include "uart_driver.h"
 #include "events_enum.h"
 #include "debug.h"
+#ifdef USE_KEYBOARD_MATRIX
+#include "keyboard_matrix_driver.h"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -49,6 +52,29 @@ static int get_key_press(uint8_t uart_index, uint8_t * input, uint8_t size)
     uint16_t count = 1000;
     int ret = 0;
 
+#ifdef USE_KEYBOARD_MATRIX
+    (void)uart_index;
+    (void)size;
+
+    if (input == NULL)
+    {
+        return (int)keyboard_matrix_rx_pending();
+    }
+
+    while (count)
+    {
+        if (keyboard_matrix_rx_pending() == TRUE)
+        {
+            ret = 1;
+            *input = keyboard_matrix_read();
+            break;
+        }
+
+        count--;
+    }
+
+    return ret;
+#else
     if (input == NULL)
     {
         return (int)uart_driver_is_rx_pending(uart_index);
@@ -67,6 +93,7 @@ static int get_key_press(uint8_t uart_index, uint8_t * input, uint8_t size)
     }
 
     return ret;
+#endif
 }
 
 static void curr_iface(uint16_t message, char key)
@@ -89,7 +116,11 @@ uint16_t cli_input_get_event(char * keycode)
 
 void cli_input_init(void)
 {
+#ifdef USE_KEYBOARD_MATRIX
+    keyboard_matrix_init();
+#else
     uart_driver_init(DEFAULT_STDIN, 19200);
+#endif
     input_message = INPUT_EVENT_NONE;
 }
 
@@ -97,6 +128,10 @@ void cli_input_process(void)
 {
     int nread = 0;
     char c;
+
+#ifdef USE_KEYBOARD_MATRIX
+    keyboard_matrix_process();
+#endif
 
     if( get_key_press( DEFAULT_STDIN, NULL, 0 ) == 0 )
     {

@@ -14,6 +14,7 @@ int main( void )
 
     debug_printf( "M68k System 01\n" );
 
+#ifndef USE_KEYBOARD_MATRIX
     if (ym2149_init() == TRUE)
     {
         uint8_t gpio_echo;
@@ -29,6 +30,7 @@ int main( void )
     {
         debug_printf("YM2149 not detected\n");
     }
+#endif
 
     timer_Start(&test_timer, 1000);
 

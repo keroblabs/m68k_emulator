@@ -33,6 +33,12 @@ else()
     add_definitions(-DM68K_EMULATE_68010=0)
 endif()
 
+# Select the keyboard model: OFF = UART keypad; ON = YM2149/MC68681 key matrix.
+option(USE_KEYBOARD_MATRIX "Use the YM2149/MC68681 scanned key matrix instead of the UART keypad" ON)
+if(USE_KEYBOARD_MATRIX)
+    add_definitions(-DUSE_KEYBOARD_MATRIX=1)
+endif()
+
 link_directories(       ~/Projects/GIT_Dev/SDL/build)
 
 include_directories(    ~/Projects/GIT_Dev/SDL/build/include
@@ -86,6 +92,7 @@ set(                SOURCE_FILES
                     ./peripherals/m68681_emulator.c
                     ./peripherals/uart_emulator.c
                     ./peripherals/ym2149_emulator.c
+                    ./peripherals/keyboard_matrix_emulator.c
                     ./peripherals/vdp9918_emulator.c
                     
                     ./sdl/sdl_input.c

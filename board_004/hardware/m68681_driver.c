@@ -251,6 +251,17 @@ uint8_t m68681_get_interrupt_status(uint8_t device)
     return *m68681_reg(device, M68681_REG_ISR_IMR);
 }
 
+uint8_t m68681_read_input_port(uint8_t device)
+{
+    if (device >= M68681_DEVICE_COUNT)
+    {
+        return 0;
+    }
+
+    /* Register 0x0D read returns the input port (IP0..IP6). */
+    return *m68681_reg(device, M68681_REG_IP_OPCR);
+}
+
 bool_t m68681_timer_configure(uint8_t device, uint16_t preload, uint8_t timer_mode)
 {
     if (device >= M68681_DEVICE_COUNT)

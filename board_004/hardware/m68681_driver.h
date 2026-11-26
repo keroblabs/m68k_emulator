@@ -43,6 +43,10 @@ void m68681_set_interrupt_vector(uint8_t device, uint8_t vector);
 void m68681_set_interrupt_mask(uint8_t device, uint8_t mask);
 uint8_t m68681_get_interrupt_status(uint8_t device);
 
+/* Reads the MC68681 input port (register 0x0D). IP5 = bit 5. */
+#define M68681_IP_BIT_5                  0x20
+uint8_t m68681_read_input_port(uint8_t device);
+
 /*
  * Counter/timer access used by timer_driver to generate the 1 ms system tick.
  * Device 0 is clocked by a 3.6864 MHz crystal (X1/CLK).

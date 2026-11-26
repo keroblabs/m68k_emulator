@@ -46,6 +46,17 @@ DEFS +=
 M68K_DATA_BUS_WIDTH ?= 8
 DEFS += -DM68K_DATA_BUS_WIDTH=$(M68K_DATA_BUS_WIDTH)
 
+# Keyboard model: 0 = UART keypad; 1 = YM2149/MC68681 scanned key matrix.
+USE_KEYBOARD_MATRIX ?= 1
+ifeq ($(USE_KEYBOARD_MATRIX),1)
+DEFS += -DUSE_KEYBOARD_MATRIX=1
+endif
+
+# Key-matrix debounce: 1 = two-scan debounce (default); 0 = accept each scan
+# immediately for the lowest input latency.
+KB_USE_DEBOUNCE ?= 0
+DEFS += -DKB_USE_DEBOUNCE=$(KB_USE_DEBOUNCE)
+
 # List all default ASM defines here, like -D_DEBUG=1
 ADEFS +=
 
@@ -85,6 +96,7 @@ SRC += ../hardware/m68681_driver.c
 SRC += ../hardware/uart_driver.c
 SRC += ../hardware/timer_driver.c
 SRC += ../hardware/ym2149_driver.c
+SRC += ../hardware/keyboard_matrix_driver.c
 
 SRC += ../system/debug.c
 SRC += ../system/vsnprintk.c

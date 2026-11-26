@@ -1,6 +1,5 @@
 #include "debug.h"
 #include "timer.h"
-#include "vga_driver.h"
 #include "cli_ctrl.h"
 
 int main( void )
@@ -10,7 +9,6 @@ int main( void )
 
     timer_Init();    
     debug_init();
-    vga_driver_init();
     cli_ctrl_init();
 
     debug_printf( "M68k System 01\n" );

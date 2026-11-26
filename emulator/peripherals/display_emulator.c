@@ -63,6 +63,29 @@ static const uint16_t pixel_lores[16] =
 
 //////////////////////////////////////////////////////////////////////////////////////
 
+/* Standard TMS9918A palette, indexed by the 4-bit colour code. */
+static const uint16_t tms9918_palette[16] =
+{
+    APP_RGB(   0,   0,   0 ),   // 0  transparent (rendered as black)
+    APP_RGB(   0,   0,   0 ),   // 1  black
+    APP_RGB(  33, 200,  66 ),   // 2  medium green
+    APP_RGB(  94, 220, 120 ),   // 3  light green
+    APP_RGB(  84,  85, 237 ),   // 4  dark blue
+    APP_RGB( 125, 118, 252 ),   // 5  light blue
+    APP_RGB( 212,  82,  77 ),   // 6  dark red
+    APP_RGB(  66, 235, 245 ),   // 7  cyan
+    APP_RGB( 252,  85,  84 ),   // 8  medium red
+    APP_RGB( 255, 121, 120 ),   // 9  light red
+    APP_RGB( 212, 193,  84 ),   // 10 dark yellow
+    APP_RGB( 230, 206, 128 ),   // 11 light yellow
+    APP_RGB(  33, 176,  59 ),   // 12 dark green
+    APP_RGB( 201,  91, 186 ),   // 13 magenta
+    APP_RGB( 204, 204, 204 ),   // 14 gray
+    APP_RGB( 255, 255, 255 ),   // 15 white
+};
+
+//////////////////////////////////////////////////////////////////////////////////////
+
 static do_events_t local_do_event;
 static VrEmuTms9918 * vdp9918;
 static uint8_t video_mode;
@@ -80,8 +103,8 @@ static void mouse_driver_event_mouse( uint32_t window_id, int32_t deltax, int32_
 
 static void display_emulator_vpd9918_process( uint32_t window_id )
 {
-    uint32_t counter;
     uint8_t line_buffer[ TMS9918_PIXELS_X ];
+    uint16_t vdp_posy;
 
     local_do_event( window_id);
     
@@ -94,34 +117,39 @@ static void display_emulator_vpd9918_process( uint32_t window_id )
 
     display_data->delay_counter = 0;
 
-    vrEmuTms9918ScanLine(vdp9918, display_data->vdp_posy, line_buffer);
-    uint16_t lcd_posx = 0;
-    uint16_t vdp_posx = 0;
+    /*
+     * Render the whole frame from the current VRAM snapshot in a single pass.
+     * Rendering one scanline at a time across many iterations would sample
+     * VRAM while the firmware is still mutating it (echoing characters,
+     * moving the cursor, scrolling), producing a torn/garbled image.
+     */
+    display_data->curr_lcd_line = display_data->lcd_buffer;
+    display_data->curr_lcd_line += (SDL_SCREEN_WIDTH * VDP_SCREEN_OFFSET_Y);
 
-    for (int scale_y = 0; scale_y < VDP_SCREEN_SCALE; scale_y++)
+    for (vdp_posy = 0; vdp_posy < TMS9918_PIXELS_Y; vdp_posy++)
     {
-        lcd_posx = VDP_SCREEN_OFFSET_X;
+        vrEmuTms9918ScanLine(vdp9918, (uint8_t)vdp_posy, line_buffer);
 
-        for (vdp_posx = 0; vdp_posx < TMS9918_PIXELS_X; vdp_posx++)    
+        for (int scale_y = 0; scale_y < VDP_SCREEN_SCALE; scale_y++)
         {
-            for (int scale_x = 0; scale_x < VDP_SCREEN_SCALE; scale_x++)    
-            {
-                display_data->curr_lcd_line[ lcd_posx++ ] = pixel_lores[ vdp_posx ];
-            }
-        }
+            uint16_t lcd_posx = VDP_SCREEN_OFFSET_X;
+            uint16_t vdp_posx;
 
-        display_data->curr_lcd_line += SDL_SCREEN_WIDTH;
+            for (vdp_posx = 0; vdp_posx < TMS9918_PIXELS_X; vdp_posx++)
+            {
+                uint16_t colour = tms9918_palette[ line_buffer[ vdp_posx ] & 0x0F ];
+
+                for (int scale_x = 0; scale_x < VDP_SCREEN_SCALE; scale_x++)
+                {
+                    display_data->curr_lcd_line[ lcd_posx++ ] = colour;
+                }
+            }
+
+            display_data->curr_lcd_line += SDL_SCREEN_WIDTH;
+        }
     }
-    
-    display_data->vdp_posy++;
-    
-    if (display_data->vdp_posy >= TMS9918_PIXELS_Y)
-    {
-        display_data->vdp_posy = 0;
-        display_data->curr_lcd_line = display_data->lcd_buffer;
-        display_data->curr_lcd_line += (SDL_SCREEN_WIDTH * VDP_SCREEN_OFFSET_Y);
-        sdl_update_window(window_id);
-    }
+
+    sdl_update_window(window_id);
 }
 
 static void display_emulator_vga_process( uint32_t window_id )
@@ -244,7 +272,7 @@ uint32_t display_emulator_init( void )
         return NEG_U32;
     }
 
-    video_mode = 0;
+    video_mode = 1;
     vdp9918 = vrEmuTms9918New();
 
     display_data->window_id = window_id;

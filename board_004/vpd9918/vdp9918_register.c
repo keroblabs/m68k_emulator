@@ -14,9 +14,14 @@ typedef struct vdp_regs_t_
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-static volatile vdp_regs_t * vdp_regs;
+static volatile vdp_regs_t * vdp_regs = (volatile vdp_regs_t *)VDP9918_ADDR;
 
 //////////////////////////////////////////////////////////////////////////////////////
+
+void vdp_init(void)
+{
+    vdp_regs = (volatile vdp_regs_t *)VDP9918_ADDR;
+}
 
 static void char_shift(uint8_t index, uint8_t * char_out)
 {
@@ -32,6 +37,14 @@ static void char_shift(uint8_t index, uint8_t * char_out)
             char_out[mask] <<= 1; 
             char_out[mask] |= (char_map_6x8[offset + row_index] & (1 << mask)) ? 0x01 : 0x00;
         }
+
+        /*
+         * The font data is stored 6 bits wide in bit positions 5..0.
+         * In TMS9918 TEXT mode each pattern byte is scanned MSB first and
+         * only the top six pixels are displayed, so shift the six pixels up
+         * into bit positions 7..2.
+         */
+        char_out[mask] <<= (8 - FONT_CHAR_WIDTH);
     }        
 }
 
@@ -70,16 +83,23 @@ void vdp_set_register(uint8_t address, uint8_t value)
 void vdp_load_characters(void)
 {
     uint8_t single_char[FONT_CHAR_HEIGHT];
-    uint8_t char_index;
-    uint8_t byte_index;
+    uint16_t char_index;
 
-    vdp_set_address(TMS_VRAM_SPRITE_PATT_ADDRESS);
+    vdp_set_address(TMS_VRAM_PATT_ADDRESS);
 
     for (char_index = FONT_CHAR_BASE; char_index <= 0xFF; char_index++)
     {
-        char_shift(char_index, single_char);
+        char_shift((uint8_t)char_index, single_char);
         vdp_send_bytes(single_char, FONT_CHAR_HEIGHT);
     }
+}
+
+void vdp_set_glyph_pattern(uint8_t glyph, const uint8_t * pattern)
+{
+    uint16_t offset = TMS_VRAM_PATT_ADDRESS + ((uint16_t)(glyph - FONT_CHAR_BASE) * FONT_CHAR_HEIGHT);
+
+    vdp_set_address(offset);
+    vdp_send_bytes((uint8_t *)pattern, FONT_CHAR_HEIGHT);
 }
 
 void vdp_set_colour(uint8_t fore, uint8_t back)

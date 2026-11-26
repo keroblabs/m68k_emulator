@@ -1,6 +1,8 @@
-#include "types.h"
+﻿#include "types.h"
 #include "m68k.h"
 #include "sdl_main.h"
+#include "sdl_lib_export.h"
+#include "sdl_window.h"
 
 #include "bus_ctrl.h"
 
@@ -11,7 +13,7 @@
 
 #include "memory_map.h"
 
-#define BINARY_FILE         "/home/marcio/Projects/emulators/m68k_emulator/board_003/make/m68k_rom.bin"
+#define BINARY_FILE         "/home/marcio/Projects/emulators/m68k_emulator/board_004/make/m68k_rom.bin"
 
 #ifndef M68K_EMULATE_68010
 #define M68K_EMULATE_68010 0
@@ -60,7 +62,12 @@ int main(int argc, char * argv[])
     while (1)
     {
         m68k_execute(32);
-        sdl_event_loop();
+
+        if (sdl_event_loop() == 0)
+        {
+            /* The SDL window received a close/quit request. */
+            break;
+        }
 
         if ((p_uart_debug != NULL) &&
             (m68681_emulator_tx_pending(p_uart_debug) == TRUE))
@@ -81,6 +88,8 @@ int main(int argc, char * argv[])
             (void)m68681_emulator_get_tx_byte(p_uart_port1);
         }
     }
+
+    sdl_terminate();
 
     return 0;
 }

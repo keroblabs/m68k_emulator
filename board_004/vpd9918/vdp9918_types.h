@@ -62,3 +62,6 @@ enum
 
 #define TMS9918_PIXELS_X        256
 #define TMS9918_PIXELS_Y        192
+
+#define TMS9918_TEXT_COLS       40
+#define TMS9918_TEXT_ROWS       24

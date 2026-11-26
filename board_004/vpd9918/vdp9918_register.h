@@ -19,6 +19,8 @@
 
 //////////////////////////////////////////////////////////////////////////////////////
 
+void vdp_init(void);
+
 void vdp_send_bytes(uint8_t *buffer, uint16_t len);
 
 void vpd_send_bytes_repeat(uint8_t value, uint16_t len);
@@ -28,6 +30,8 @@ void vdp_set_address(uint16_t address);
 void vdp_set_register(uint8_t address, uint8_t value);
 
 void vdp_load_characters(void);
+
+void vdp_set_glyph_pattern(uint8_t glyph, const uint8_t * pattern);
 
 void vdp_set_colour(uint8_t fore, uint8_t back);
 

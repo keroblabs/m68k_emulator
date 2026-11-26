@@ -67,7 +67,7 @@ CINCDIR += ../framework
 CINCDIR += ../source
 CINCDIR += ../cli
 CINCDIR += ../graphics
-#CINCDIR += ../vdp
+CINCDIR += ../vpd9916
 
 # End of include section
 ##############################################################################################
@@ -84,23 +84,19 @@ SRC += ../boot/syscalls.c
 SRC += ../hardware/m68681_driver.c
 SRC += ../hardware/uart_driver.c
 SRC += ../hardware/timer_driver.c
-SRC += ../hardware/vga_driver.c
 
 SRC += ../system/debug.c
 SRC += ../system/vsnprintk.c
 
 SRC += ../framework/buffer.c
 SRC += ../framework/timer.c
-SRC += ../framework/vt100_ctrl.c
 SRC += ../framework/vt100_input.c
 
 SRC += ../cli/cli.c
 
-SRC += ../graphics/draw.c
-SRC += ../graphics/font_8x8.c
-
-#SRC += ../vdp/vdp9918_register.c
-#SRC += ../vdp/vdp9918_driver.c
+SRC += ../vpd9916/vdp9918_register.c
+SRC += ../vpd9916/vdp9918_driver.c
+SRC += ../vpd9916/vdp9918_vt100.c
 
 SRC += ../source/main.c
 SRC += ../source/cli_input.c

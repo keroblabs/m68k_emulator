@@ -1,6 +1,6 @@
 #include "cli.h"
 #include "cli_input.h"
-#include "vt100_ctrl.h"
+#include "vdp9918_vt100.h"
 #include "debug.h"
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +22,7 @@ static const cli_api_data_t io_api_list =
 
 static void api_puts_interface(void * p_data, const char *s)
 {
-    vt100_ctrl_write((char *)s);
+    vdp9918_vt100_write((char *)s);
 }
 
 static uint16_t api_even_interface(void * p_data, char * keycode)
@@ -51,7 +51,7 @@ void cli_ctrl_process(void)
 void cli_ctrl_init(void)
 {
     cli_input_init();
-    vt100_ctrl_init();
+    vdp9918_vt100_init();
 
     cli_init(&cli_data);
     cli_command_add(&cli_data, &cli_command, NULL, cli_null_command, &cli_data);

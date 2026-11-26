@@ -18,6 +18,8 @@ void vpd9918_text_mode_init(void)
 {
     prev_text_address = 0xFFFF;
 
+    vdp_init();
+
     vdp_set_register(TMS_REG_0, TMS_R0_MODE_TEXT);
     vdp_set_register(TMS_REG_1, TMS_R1_MODE_TEXT | TMS_R1_RAM_16K);
 
@@ -29,21 +31,63 @@ void vpd9918_text_mode_init(void)
     vdp_set_reg_colour(TMS_COLOUR_WHITE, TMS_COLOUR_LT_BLUE);
 
     vdp_load_characters();
+
+    /* Enable the display now that the pattern generator is loaded. */
+    vdp_set_register(TMS_REG_1, TMS_R1_MODE_TEXT | TMS_R1_RAM_16K | TMS_R1_DISP_ACTIVE);
+
+    vdp9918_text_set_cursor_shape(VDP_CURSOR_BLOCK);
+}
+
+void vdp9918_text_set_cursor_shape(uint8_t shape)
+{
+    uint8_t pattern[FONT_CHAR_HEIGHT];
+    uint8_t row;
+
+    /* Displayed pixels in text mode are the top six bits (7..2) of each row. */
+    for (row = 0; row < FONT_CHAR_HEIGHT; row++)
+    {
+        pattern[row] = 0x00;
+    }
+
+    if (shape == VDP_CURSOR_BLOCK)
+    {
+        for (row = 0; row < FONT_CHAR_HEIGHT; row++)
+        {
+            pattern[row] = 0xFC;
+        }
+    }
+    else /* VDP_CURSOR_UNDERLINE */
+    {
+        pattern[FONT_CHAR_HEIGHT - 2] = 0xFC;
+        pattern[FONT_CHAR_HEIGHT - 1] = 0xFC;
+    }
+
+    vdp_set_glyph_pattern(VDP_CURSOR_GLYPH, pattern);
+    prev_text_address = 0x0FFFF;
+}
+
+void vdp9918_text_clear_screen(void)
+{
+    uint16_t total_char = TMS9918_TEXT_COLS * TMS9918_TEXT_ROWS;
+
+    vdp_set_address(TMS_VRAM_NAME_ADDRESS);
+    prev_text_address = 0x0FFFF;
+    vpd_send_bytes_repeat(0x00, total_char);
 }
 
 void vdp9918_text_clear_line(uint16_t char_posx, uint16_t char_posy)
 {
-    uint16_t char_addr = ((char_posy * TMS9918_PIXELS_X) + char_posx) + TMS_VRAM_NAME_ADDRESS;
-    uint16_t total_char = (TMS9918_PIXELS_X / FONT_CHAR_WIDTH) - char_posx;
+    uint16_t char_addr = ((char_posy * TMS9918_TEXT_COLS) + char_posx) + TMS_VRAM_NAME_ADDRESS;
+    uint16_t total_char = TMS9918_TEXT_COLS - char_posx;
 
     vdp_set_address(char_addr);
     prev_text_address = 0x0FFFF;
-    vpd_send_bytes_repeat(0x20, total_char);
+    vpd_send_bytes_repeat(0x00, total_char);
 }
 
 void vdp9918_text_string_out(const char * text, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colour, uint16_t back_colour, bool_t is_transparent)
 {
-    uint16_t char_addr = ((char_posy * TMS9918_PIXELS_X) + char_posx) + TMS_VRAM_NAME_ADDRESS;
+    uint16_t char_addr = ((char_posy * TMS9918_TEXT_COLS) + char_posx) + TMS_VRAM_NAME_ADDRESS;
     uint16_t index;
     uint16_t len;
 
@@ -70,13 +114,15 @@ void vdp9918_text_string_out(const char * text, uint16_t char_posx, uint16_t cha
 
 void vdp9918_text_char_out(char c_out, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colour, uint16_t back_colour, bool_t is_transparent)
 {
-    uint16_t char_addr = ((char_posy * TMS9918_PIXELS_X) + char_posx) + TMS_VRAM_NAME_ADDRESS;
+    uint16_t char_addr = ((char_posy * TMS9918_TEXT_COLS) + char_posx) + TMS_VRAM_NAME_ADDRESS;
 
-    if (prev_text_address != char_addr)
-    {
-        prev_text_address = char_addr + 1;
-        vdp_set_address(char_addr);
-    }
+    /*
+     * Always program the VRAM address before writing. Callers (e.g. the VT100
+     * cursor handling) frequently rewrite the same or nearby cells out of
+     * order, so relying on the VDP's auto-increment would desync and place
+     * characters at the wrong positions.
+     */
+    vdp_set_address(char_addr);
 
     c_out -= FONT_CHAR_BASE;
 

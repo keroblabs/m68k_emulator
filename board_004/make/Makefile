@@ -67,7 +67,7 @@ CINCDIR += ../framework
 CINCDIR += ../source
 CINCDIR += ../cli
 CINCDIR += ../graphics
-CINCDIR += ../vpd9916
+CINCDIR += ../vpd9918
 
 # End of include section
 ##############################################################################################
@@ -94,9 +94,9 @@ SRC += ../framework/vt100_input.c
 
 SRC += ../cli/cli.c
 
-SRC += ../vpd9916/vdp9918_register.c
-SRC += ../vpd9916/vdp9918_driver.c
-SRC += ../vpd9916/vdp9918_vt100.c
+SRC += ../vpd9918/vdp9918_register.c
+SRC += ../vpd9918/vdp9918_driver.c
+SRC += ../vpd9918/vdp9918_vt100.c
 
 SRC += ../source/main.c
 SRC += ../source/cli_input.c

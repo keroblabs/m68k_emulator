@@ -44,8 +44,8 @@ void m68681_set_interrupt_mask(uint8_t device, uint8_t mask);
 uint8_t m68681_get_interrupt_status(uint8_t device);
 
 /*
- * Counter/timer access is exposed now so timer_driver can migrate later.
- * The existing generic board timer remains the active system timer for now.
+ * Counter/timer access used by timer_driver to generate the 1 ms system tick.
+ * Device 0 is clocked by a 3.6864 MHz crystal (X1/CLK).
  */
 bool_t m68681_timer_configure(uint8_t device, uint16_t preload, uint8_t timer_mode);
 void m68681_timer_start(uint8_t device);

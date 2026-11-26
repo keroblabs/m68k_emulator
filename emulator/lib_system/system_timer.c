@@ -76,3 +76,29 @@ uint64_t system_timer_get_us( void )
     return (get_performance_counter() - timer_reference) >> 2;
     #endif
 }
+
+uint64_t system_timer_get_ct_ticks( void )
+{
+    if( is_init == FALSE )
+    {
+        return 0;
+    }
+
+    #if defined(UNIX)
+    struct timeval ms_value;
+    uint64_t useconds_total;
+
+    gettimeofday( &ms_value, NULL );
+
+    useconds_total = ( uint64_t )( ms_value.tv_sec - ms_start.tv_sec ) * 1000000ull
+                   + ( uint64_t )( ms_value.tv_usec - ms_start.tv_usec );
+    #else
+    uint64_t useconds_total = system_timer_get_us();
+    #endif
+
+    /*
+     * 3.6864 MHz = 3686400 ticks/s.
+     * ticks = us * 3686400 / 1000000 = us * 2304 / 625 (exact, integer-safe).
+     */
+    return ( useconds_total * 2304ull ) / 625ull;
+}

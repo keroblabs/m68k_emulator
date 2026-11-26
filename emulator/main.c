@@ -9,7 +9,8 @@
 #include "display_emulator.h"
 #include "keypad_emulator.h"
 #include "m68681_emulator.h"
-#include "timer_emulator.h"
+
+#include "system_timer.h"
 
 #include "memory_map.h"
 
@@ -41,8 +42,8 @@ int main(int argc, char * argv[])
 
     keypad_emulator_init(window_id, p_uart_keypad);
 
-    /* Keep the existing generic system timer active during this migration. */
-    timer_emulator_init(window_id);
+    /* Host time source feeding the MC68681 counter/timer emulation. */
+    system_timer_init();
 
     bus_ctrl_load_rom(BINARY_FILE);
 
@@ -61,7 +62,22 @@ int main(int argc, char * argv[])
 
     while (1)
     {
-        m68k_execute(32);
+        /*
+         * Run the CPU and service the MC68681 timer many times before touching
+         * SDL.  The display refresh inside sdl_event_loop() is comparatively
+         * expensive; polling the timer only once per refresh would throttle
+         * interrupt delivery and make the firmware's millisecond clock run
+         * slow.  Servicing the timer in a tight inner batch keeps the 1 ms
+         * interrupt flowing (and drains any backlog) independently of the
+         * display frame rate.
+         */
+        for (int step = 0; step < 256; step++)
+        {
+            m68k_execute(64);
+
+            /* MC68681 device 0 provides the 1 ms system-timer interrupt. */
+            m68681_emulator_timer_poll(p_duart0);
+        }
 
         if (sdl_event_loop() == 0)
         {

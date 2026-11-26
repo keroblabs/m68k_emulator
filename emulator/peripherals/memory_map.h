@@ -54,9 +54,6 @@ enum
 #define M68681_0_ADDR               (IO_BASE_ADDRESS + 0x0000)
 #define M68681_1_ADDR               (IO_BASE_ADDRESS + 0x0100)
 
-/* Existing generic timer controller: retained temporarily. */
-#define TIMER_CTRL_ADDR             (IO_BASE_ADDRESS + 0x0800)
-
 /* VDP space */
 #define VDP_CONTROL_ADDR            (IO_BASE_ADDRESS + 0x0C00)
 

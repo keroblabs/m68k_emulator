@@ -62,9 +62,6 @@
 #define GPIO_INPUT_ADDR             (IO_BASE_ADDRESS + 0x0400)
 #define GPIO_OUTPUT_ADDR            (IO_BASE_ADDRESS + 0x0500)
 
-/* Existing generic timer controller: retained temporarily. */
-#define TIMER_CTRL_ADDR             (IO_BASE_ADDRESS + 0x0800)
-
 /* VDP9918 space */
 #define VDP9918_ADDR                (IO_BASE_ADDRESS + 0x0C00)
 

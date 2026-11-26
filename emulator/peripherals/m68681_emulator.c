@@ -4,6 +4,7 @@
 #include "memory_map.h"
 #include "bus_ctrl.h"
 #include "io_ctrl.h"
+#include "system_timer.h"
 
 #define M68681_REG_COUNT               16
 #define M68681_RX_FIFO_SIZE            3
@@ -58,6 +59,10 @@
 #define M68681_RESET_IVR                 0x0F
 #define M68681_INVALID_READ              0xFF
 
+/* Counter/timer interrupt routing to the CPU (matches the firmware handler). */
+#define M68681_TIMER_IRQ_LEVEL           0x05
+#define M68681_TIMER_IRQ_VECTOR          0
+
 typedef struct m68681_channel_t_
 {
     uint8_t mode[2];
@@ -96,6 +101,15 @@ typedef struct m68681_data_t_
     uint16_t timer_counter;
     bool_t timer_running;
     bool_t timer_irq;
+
+    uint64_t timer_start_ticks;
+    uint64_t timer_period_count;
+    bool_t timer_irq_requested;
+
+    m68681_port_read_t read_callback;
+    m68681_port_write_t write_callback;
+    void * callback_data;
+    
 } m68681_data_t;
 
 static m68681_data_t * m68681_data_list = NULL;
@@ -364,15 +378,19 @@ static uint8_t m68681_register_read(m68681_data_t * device, uint8_t reg)
             return device->ivr;
 
         case M68681_REG_IP_OPCR:
-            return device->input_port;
+            return device->read_callback != NULL ? device->read_callback(device->callback_data) : 0;
 
         case M68681_REG_START_OPSET:
             device->timer_counter = device->timer_preload;
             device->timer_running = TRUE;
+            device->timer_start_ticks = system_timer_get_ct_ticks();
+            device->timer_period_count = 0;
+            device->timer_irq_requested = FALSE;
             return 0;
 
         case M68681_REG_STOP_OPRESET:
             device->timer_irq = FALSE;
+            device->timer_irq_requested = FALSE;
             if ((device->acr & M68681_ACR_TIMER_MODE) == 0)
             {
                 device->timer_running = FALSE;
@@ -447,10 +465,18 @@ static void m68681_register_write(m68681_data_t * device, uint8_t reg, uint8_t d
 
         case M68681_REG_START_OPSET:
             device->output_port |= data;
+            if (device->write_callback != NULL)
+            {
+                device->write_callback(device->callback_data, device->output_port);
+            }
             break;
 
         case M68681_REG_STOP_OPRESET:
             device->output_port &= (uint8_t)~data;
+            if (device->write_callback != NULL)
+            {
+                device->write_callback(device->callback_data, device->output_port);
+            }
             break;
 
         default:
@@ -586,4 +612,69 @@ uint8_t m68681_emulator_interrupt_vector(void * p_device)
     m68681_data_t * device = (m68681_data_t *)p_device;
 
     return (device != NULL) ? device->ivr : M68681_RESET_IVR;
+}
+
+void m68681_emulator_timer_poll(void * p_device)
+{
+    m68681_data_t * device = (m68681_data_t *)p_device;
+    uint64_t ticks;
+    uint64_t elapsed;
+    uint64_t periods;
+    uint16_t preload;
+
+    if ((device == NULL) || (device->timer_running == FALSE))
+    {
+        return;
+    }
+
+    /* Only timer mode free-runs as a periodic interrupt source. */
+    if ((device->acr & M68681_ACR_TIMER_MODE) == 0)
+    {
+        return;
+    }
+
+    preload = (device->timer_preload != 0) ? device->timer_preload : 1u;
+
+    ticks = system_timer_get_ct_ticks();
+    elapsed = ticks - device->timer_start_ticks;
+
+    /*
+     * MC68681 timer mode: the counter-ready interrupt is generated at the
+     * output toggle rate, f = Clock / (2 * preload).  One full interrupt
+     * period therefore spans 2 * preload input clocks.
+     */
+    periods = elapsed / (2u * (uint64_t)preload);
+
+    /* Present the 16-bit down-counter value as firmware would read it. */
+    device->timer_counter = (uint16_t)(preload - (uint16_t)(elapsed % preload));
+
+    /*
+     * Deliver exactly one interrupt per elapsed period.  A single poll must
+     * not collapse several missed periods into one interrupt: the firmware
+     * measures time by counting timer interrupts, so dropping periods makes
+     * its millisecond clock run slow.  Any backlog that builds up while the
+     * host was busy (e.g. a display refresh) is drained one period per
+     * acknowledge cycle on subsequent polls.
+     */
+    if ((periods > device->timer_period_count) &&
+        ((device->imr & M68681_ISR_COUNTER_TIMER) != 0) &&
+        (device->timer_irq_requested == FALSE))
+    {
+        device->timer_period_count++;
+        device->timer_irq = TRUE;
+        device->timer_irq_requested = TRUE;
+        bus_ctrl_irq_req(M68681_TIMER_IRQ_VECTOR, M68681_TIMER_IRQ_LEVEL, NULL);
+    }
+}
+
+void m68681_emulator_set_port_callbacks(void * p_device, m68681_port_read_t read_callback, m68681_port_write_t write_callback, void * p_data)
+{
+    m68681_data_t * device = (m68681_data_t *)p_device;
+
+    if (device != NULL)
+    {
+        device->read_callback = read_callback;
+        device->write_callback = write_callback;
+        device->callback_data = p_data;
+    }
 }

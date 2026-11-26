@@ -84,6 +84,7 @@ SRC += ../boot/syscalls.c
 SRC += ../hardware/m68681_driver.c
 SRC += ../hardware/uart_driver.c
 SRC += ../hardware/timer_driver.c
+SRC += ../hardware/ym2149_driver.c
 
 SRC += ../system/debug.c
 SRC += ../system/vsnprintk.c

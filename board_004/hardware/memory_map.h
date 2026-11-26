@@ -58,6 +58,9 @@
 
 /* 0x70200-0x703ff is currently available/reserved. */
 
+/* YM2149 PSG (address latch + data port). Shares 0x0400 window. */
+#define YM2149_ADDR                 (IO_BASE_ADDRESS + 0x0400)
+
 /* GPIO space */
 #define GPIO_INPUT_ADDR             (IO_BASE_ADDRESS + 0x0400)
 #define GPIO_OUTPUT_ADDR            (IO_BASE_ADDRESS + 0x0500)

@@ -9,6 +9,7 @@
 #include "display_emulator.h"
 #include "keypad_emulator.h"
 #include "m68681_emulator.h"
+#include "ym2149_emulator.h"
 
 #include "system_timer.h"
 
@@ -20,6 +21,25 @@
 #define M68K_EMULATE_68010 0
 #endif
 
+/*
+ * Simple host adapter for the YM2149 GPIO ports.  Port A output is looped back
+ * to Port A/B inputs so firmware can drive a value and sense it, exercising the
+ * shared MC68681 port callback contract without needing dedicated host wiring.
+ */
+static uint8_t ym2149_gpio_loopback_value = 0x00;
+
+static uint8_t ym2149_gpio_read(void * p_data)
+{
+    (void)p_data;
+    return ym2149_gpio_loopback_value;
+}
+
+static void ym2149_gpio_write(void * p_data, uint8_t data)
+{
+    (void)p_data;
+    ym2149_gpio_loopback_value = data;
+}
+
 int main(int argc, char * argv[])
 {
     void * p_duart0;
@@ -27,6 +47,7 @@ int main(int argc, char * argv[])
     void * p_uart_keypad;
     void * p_uart_debug;
     void * p_uart_port1;
+    void * p_ym2149;
 
     (void)argc;
     (void)argv;
@@ -41,6 +62,13 @@ int main(int argc, char * argv[])
     p_uart_port1  = m68681_emulator_get_channel(p_duart1, M68681_EMULATOR_CHANNEL_A);
 
     keypad_emulator_init(window_id, p_uart_keypad);
+
+    /* YM2149 PSG: GPIO is fully modeled; audio config is stored for later. */
+    p_ym2149 = ym2149_emulator_init(YM2149_ADDR);
+    ym2149_emulator_set_port_callbacks(p_ym2149, YM2149_EMULATOR_PORT_A,
+                                       ym2149_gpio_read, ym2149_gpio_write, NULL);
+    ym2149_emulator_set_port_callbacks(p_ym2149, YM2149_EMULATOR_PORT_B,
+                                       ym2149_gpio_read, ym2149_gpio_write, NULL);
 
     /* Host time source feeding the MC68681 counter/timer emulation. */
     system_timer_init();

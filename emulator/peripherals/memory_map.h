@@ -54,6 +54,9 @@ enum
 #define M68681_0_ADDR               (IO_BASE_ADDRESS + 0x0000)
 #define M68681_1_ADDR               (IO_BASE_ADDRESS + 0x0100)
 
+/* YM2149 programmable sound generator (address latch + data port). */
+#define YM2149_ADDR                 (IO_BASE_ADDRESS + 0x0400)
+
 /* VDP space */
 #define VDP_CONTROL_ADDR            (IO_BASE_ADDRESS + 0x0C00)
 

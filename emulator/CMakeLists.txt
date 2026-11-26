@@ -85,6 +85,7 @@ set(                SOURCE_FILES
                     ./peripherals/keypad_emulator.c
                     ./peripherals/m68681_emulator.c
                     ./peripherals/uart_emulator.c
+                    ./peripherals/ym2149_emulator.c
                     ./peripherals/vdp9918_emulator.c
                     
                     ./sdl/sdl_input.c

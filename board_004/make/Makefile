@@ -46,6 +46,16 @@ DEFS +=
 M68K_DATA_BUS_WIDTH ?= 8
 DEFS += -DM68K_DATA_BUS_WIDTH=$(M68K_DATA_BUS_WIDTH)
 
+# Build with USE_V9958=1 for the Yamaha V9958 four-port video interface.
+# The TMS9918 remains the default for existing Board 004 binaries.
+USE_V9958 ?= 0
+ifeq ($(USE_V9958),1)
+ifneq ($(M68K_DATA_BUS_WIDTH),8)
+$(error V9958 Board 004 currently requires an 8-bit data bus)
+endif
+DEFS += -DUSE_V9958=1
+endif
+
 # Keyboard model: 0 = UART keypad; 1 = YM2149/MC68681 scanned key matrix.
 USE_KEYBOARD_MATRIX ?= 1
 ifeq ($(USE_KEYBOARD_MATRIX),1)
@@ -79,6 +89,7 @@ CINCDIR += ../source
 CINCDIR += ../cli
 CINCDIR += ../graphics
 CINCDIR += ../vpd9918
+CINCDIR += ../vdp9958
 
 # End of include section
 ##############################################################################################
@@ -110,6 +121,9 @@ SRC += ../cli/cli.c
 SRC += ../vpd9918/vdp9918_register.c
 SRC += ../vpd9918/vdp9918_driver.c
 SRC += ../vpd9918/vdp9918_vt100.c
+ifeq ($(USE_V9958),1)
+SRC += ../vdp9958/vdp9958_driver.c
+endif
 
 SRC += ../source/main.c
 SRC += ../source/cli_input.c

@@ -59,5 +59,7 @@ enum
 
 /* VDP space */
 #define VDP_CONTROL_ADDR            (IO_BASE_ADDRESS + 0x0C00)
+/* V9958 ports: control/status +0, VRAM data +1, palette +2, indirect +3. */
+#define VDP9958_ADDR                VDP_CONTROL_ADDR
 
 #endif /* _memory_map_h_ */

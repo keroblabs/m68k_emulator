@@ -2,6 +2,9 @@
 #include "vdp9918_types.h"
 #include "font_6x8_v.h"
 #include "memory_map.h"
+#ifdef USE_V9958
+#include "vdp9958_driver.h"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -21,6 +24,9 @@ static volatile vdp_regs_t * vdp_regs = (volatile vdp_regs_t *)VDP9918_ADDR;
 void vdp_init(void)
 {
     vdp_regs = (volatile vdp_regs_t *)VDP9918_ADDR;
+#ifdef USE_V9958
+    vdp9958_init();
+#endif
 }
 
 static void char_shift(uint8_t index, uint8_t * char_out)
@@ -70,14 +76,24 @@ void vpd_send_bytes_repeat(uint8_t value, uint16_t len)
 
 void vdp_set_address(uint16_t address)
 {
-    vdp_regs->control = address & 0x0FF;
-    vdp_regs->control = address >> 8;
+#ifdef USE_V9958
+    vdp9958_set_vram_address((uint32_t)address, TRUE);
+#else
+    /* Second control byte bit 6 selects VRAM write (not read/prefetch). */
+    vdp_regs->control = (uint8_t)address;
+    vdp_regs->control = (uint8_t)(((address >> 8) & 0x3Fu) | 0x40u);
+#endif
 }
 
 void vdp_set_register(uint8_t address, uint8_t value)
 {
-    vdp_regs->control = value & 0x07F;
-    vdp_regs->control = (address & 0x07F) | 0x80;
+#ifdef USE_V9958
+    vdp9958_write_register(address, value);
+#else
+    /* Preserve all eight bits of the value; R0/R1 have meaningful bit 7. */
+    vdp_regs->control = value;
+    vdp_regs->control = (uint8_t)((address & 0x07u) | 0x80u);
+#endif
 }
 
 void vdp_load_characters(void)

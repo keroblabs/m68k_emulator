@@ -67,5 +67,7 @@
 
 /* VDP9918 space */
 #define VDP9918_ADDR                (IO_BASE_ADDRESS + 0x0C00)
+/* Keep the legacy board I/O map until the MC68K/8 memory map is migrated. */
+#define VDP9958_ADDR                VDP9918_ADDR
 
 #endif /* _memory_map_h_ */

@@ -12,14 +12,18 @@
  *   - MC68681 (device 0) IP5 returns the selected cell.
  *
  * keyboard_matrix_process() must be called frequently from the main loop; it
- * scans one row every 10 ms (a full 16-row scan therefore takes 160 ms).  A
- * keypress is accepted only when two consecutive full scans agree (debounce).
- * Decoded VT100 bytes are queued and retrieved through the rx API below.
+ * scans one row per tick (a full 16-row scan takes 16 ticks).  A keypress is
+ * accepted only when two consecutive full scans agree (debounce).  Decoded
+ * input events are queued and retrieved through keyboard_matrix_get_event().
  */
 void keyboard_matrix_init(void);
 void keyboard_matrix_process(void);
 
-bool_t keyboard_matrix_rx_pending(void);
-uint8_t keyboard_matrix_read(void);
+/*
+ * Pops one decoded input event produced by the scan.  Special keys carry an
+ * INPUT_EVENT_KEY_* code (key = 0); character keys carry INPUT_EVENT_KEYPRESS
+ * with the decoded byte in key.  Returns FALSE when no event is queued.
+ */
+bool_t keyboard_matrix_get_event(uint16_t * event, char * key);
 
 #endif /* _keyboard_matrix_driver_h_ */

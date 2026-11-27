@@ -2,7 +2,7 @@
 #include "ym2149_driver.h"
 #include "m68681_driver.h"
 #include "timer.h"
-#include "buffer.h"
+#include "events_enum.h"
 
 /*
  * Keyboard matrix decode table (16 rows x 8 columns).  The coordinates MUST
@@ -50,15 +50,15 @@ typedef struct kb_key_t_
 {
     uint8_t row;
     uint8_t col;
-    uint8_t normal;      /* ASCII when no modifier; 0 for pure sequence keys. */
-    uint8_t shifted;     /* ASCII when Shift is held. */
-    const char * seq;    /* VT100 sequence for special keys, NULL otherwise. */
+    uint8_t normal;      /* ASCII when no modifier; 0 for pure event keys.   */
+    uint8_t shifted;     /* ASCII when Shift is held.                        */
+    uint16_t event;      /* Direct input event for special keys; 0 = char.   */
 } kb_key_t;
 
 static const kb_key_t kb_keys[] =
 {
     /* Row 0 */
-    { 0, 0, 0x1B, 0x1B, "\x1b" },
+    { 0, 0, 0, 0, INPUT_EVENT_KEY_ESC },
     { 0, 1, '1', '!', 0 },
     { 0, 2, '2', '@', 0 },
     { 0, 3, '3', '#', 0 },
@@ -122,34 +122,34 @@ static const kb_key_t kb_keys[] =
     { 6, 1, '/', '?', 0 },
     { 6, 2, ' ', ' ', 0 },
     { 6, 3, '`', '~', 0 },
-    { 6, 4, 0, 0, "\x1b[A" },     /* Up */
-    { 6, 5, 0, 0, "\x1b[B" },     /* Down */
-    { 6, 6, 0, 0, "\x1b[C" },     /* Right */
-    { 6, 7, 0, 0, "\x1b[D" },     /* Left */
+    { 6, 4, 0, 0, INPUT_EVENT_KEY_UP },
+    { 6, 5, 0, 0, INPUT_EVENT_KEY_DOWN },
+    { 6, 6, 0, 0, INPUT_EVENT_KEY_RIGHT },
+    { 6, 7, 0, 0, INPUT_EVENT_KEY_LEFT },
 
     /* Row 7 */
-    { 7, 0, 0, 0, "\x1b[1~" },    /* Home */
-    { 7, 1, 0, 0, "\x1b[4~" },    /* End */
-    { 7, 2, 0, 0, "\x1b[3~" },    /* Delete */
-    { 7, 3, 0, 0, "\x1b[5~" },    /* Page Up */
-    { 7, 4, 0, 0, "\x1b[6~" },    /* Page Down */
-    { 7, 5, 0, 0, "\x1b[2~" },    /* Insert */
-    { 7, 6, 0, 0, "\x1bOP" },     /* F1 */
-    { 7, 7, 0, 0, "\x1bOQ" },     /* F2 */
+    { 7, 0, 0, 0, INPUT_EVENT_KEY_HOME },
+    { 7, 1, 0, 0, INPUT_EVENT_KEY_END },
+    { 7, 2, 0, 0, INPUT_EVENT_KEY_DELETE },
+    { 7, 3, 0, 0, INPUT_EVENT_KEY_PAGEUP },
+    { 7, 4, 0, 0, INPUT_EVENT_KEY_PAGEDOWN },
+    { 7, 5, 0, 0, INPUT_EVENT_NONE },     /* Insert (no event defined) */
+    { 7, 6, 0, 0, INPUT_EVENT_NONE },     /* F1  (no event defined) */
+    { 7, 7, 0, 0, INPUT_EVENT_NONE },     /* F2 */
 
     /* Row 8 */
-    { 8, 0, 0, 0, "\x1bOR" },     /* F3 */
-    { 8, 1, 0, 0, "\x1bOS" },     /* F4 */
-    { 8, 2, 0, 0, "\x1b[15~" },   /* F5 */
-    { 8, 3, 0, 0, "\x1b[17~" },   /* F6 */
-    { 8, 4, 0, 0, "\x1b[18~" },   /* F7 */
-    { 8, 5, 0, 0, "\x1b[19~" },   /* F8 */
-    { 8, 6, 0, 0, "\x1b[20~" },   /* F9 */
-    { 8, 7, 0, 0, "\x1b[21~" },   /* F10 */
+    { 8, 0, 0, 0, INPUT_EVENT_NONE },     /* F3 */
+    { 8, 1, 0, 0, INPUT_EVENT_NONE },     /* F4 */
+    { 8, 2, 0, 0, INPUT_EVENT_NONE },     /* F5 */
+    { 8, 3, 0, 0, INPUT_EVENT_NONE },     /* F6 */
+    { 8, 4, 0, 0, INPUT_EVENT_NONE },     /* F7 */
+    { 8, 5, 0, 0, INPUT_EVENT_NONE },     /* F8 */
+    { 8, 6, 0, 0, INPUT_EVENT_NONE },     /* F9 */
+    { 8, 7, 0, 0, INPUT_EVENT_NONE },     /* F10 */
 
     /* Row 9 */
-    { 9, 0, 0, 0, "\x1b[23~" },   /* F11 */
-    { 9, 1, 0, 0, "\x1b[24~" },   /* F12 */
+    { 9, 0, 0, 0, INPUT_EVENT_NONE },     /* F11 */
+    { 9, 1, 0, 0, INPUT_EVENT_NONE },     /* F12 */
 };
 
 #define KB_KEY_COUNT    (sizeof(kb_keys) / sizeof(kb_keys[0]))
@@ -162,8 +162,30 @@ static uint8_t kb_caps_lock;
 
 static timer_data_t kb_timer;
 
-static buffer_data_t kb_rx_buffer_data;
-static uint8_t kb_rx_buffer[KB_RX_BUFFER_SIZE];
+/* Decoded (event, key) pairs ready for the CLI, no VT100 round-trip. */
+typedef struct kb_event_t_
+{
+    uint16_t event;
+    char key;
+} kb_event_t;
+
+static kb_event_t kb_event_q[KB_RX_BUFFER_SIZE];
+static uint8_t kb_event_head;
+static uint8_t kb_event_tail;
+static uint8_t kb_event_count;
+
+static void kb_event_push(uint16_t event, char key)
+{
+    if (kb_event_count >= KB_RX_BUFFER_SIZE)
+    {
+        return;   /* Queue full: drop the oldest-protecting overflow. */
+    }
+
+    kb_event_q[kb_event_head].event = event;
+    kb_event_q[kb_event_head].key = key;
+    kb_event_head = (uint8_t)((kb_event_head + 1u) % KB_RX_BUFFER_SIZE);
+    kb_event_count++;
+}
 
 static void kb_output_select(uint8_t row, uint8_t col)
 {
@@ -193,13 +215,12 @@ static const kb_key_t * kb_lookup(uint8_t row, uint8_t col)
 
 static void kb_emit_key(const kb_key_t * key, uint8_t shift, uint8_t ctrl)
 {
-    if (key->seq != NULL)
+    /* Special keys carry a direct input event; emit it without encoding. */
+    if (key->event != 0)
     {
-        const char * p = key->seq;
-        while (*p != '\0')
+        if (key->event != INPUT_EVENT_NONE)
         {
-            buffer_write(&kb_rx_buffer_data, (uint8_t)*p);
-            p++;
+            kb_event_push(key->event, 0);
         }
         return;
     }
@@ -225,7 +246,8 @@ static void kb_emit_key(const kb_key_t * key, uint8_t shift, uint8_t ctrl)
         c = (uint8_t)(c & 0x1Fu);
     }
 
-    buffer_write(&kb_rx_buffer_data, c);
+    /* Character keys are delivered as a keypress carrying the decoded byte. */
+    kb_event_push(INPUT_EVENT_KEYPRESS, (char)c);
 }
 
 static void kb_accept_scan(const uint8_t * debounced)
@@ -342,7 +364,9 @@ void keyboard_matrix_init(void)
         kb_stable[row] = 0;
     }
 
-    buffer_init(&kb_rx_buffer_data, kb_rx_buffer, KB_RX_BUFFER_SIZE);
+    kb_event_head = 0;
+    kb_event_tail = 0;
+    kb_event_count = 0;
 
     /* YM2149 Port A drives the scan lines (output). */
     ym2149_init();
@@ -360,12 +384,23 @@ void keyboard_matrix_process(void)
     }
 }
 
-bool_t keyboard_matrix_rx_pending(void)
+bool_t keyboard_matrix_get_event(uint16_t * event, char * key)
 {
-    return (buffer_is_empty(&kb_rx_buffer_data) == FALSE) ? TRUE : FALSE;
-}
+    if (kb_event_count == 0)
+    {
+        return FALSE;
+    }
 
-uint8_t keyboard_matrix_read(void)
-{
-    return buffer_read(&kb_rx_buffer_data);
+    if (event != NULL)
+    {
+        *event = kb_event_q[kb_event_tail].event;
+    }
+    if (key != NULL)
+    {
+        *key = kb_event_q[kb_event_tail].key;
+    }
+
+    kb_event_tail = (uint8_t)((kb_event_tail + 1u) % KB_RX_BUFFER_SIZE);
+    kb_event_count--;
+    return TRUE;
 }

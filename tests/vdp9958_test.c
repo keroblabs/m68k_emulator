@@ -83,6 +83,25 @@ int main(void)
     assert(vdp9958_peek_vram(v, 0) == 0xab);
     assert(vdp9958_peek_vram(v, 1) == 0xcd);
     assert(!(vdp9958_port_read(v, 0) & 1));
+    /* Board 004's existing 40-column monitor must remain TMS-compatible. */
+    vdp9958_reset(v);
+    reg(v, 0, 0x00);                /* Text 1 mode (M1=1) */
+    reg(v, 1, 0x50);                /* 40x24 text, display enabled */
+    reg(v, 2, 0x0e);                /* Name table at 0x3800 */
+    reg(v, 4, 0x04);                /* Glyphs at 0x2000 */
+    reg(v, 7, 0xf1);                /* White on black */
+    address(v, 0x2000, 1);
+    vdp9958_port_write(v, 1, 0xfc); /* First 6 pixels of glyph 0 */
+    address(v, 0x2008, 1);
+    vdp9958_port_write(v, 1, 0x00); /* Blank row for glyph 1 */
+    address(v, 0x3800, 1);
+    vdp9958_port_write(v, 1, 0);
+    vdp9958_port_write(v, 1, 1); /* Next cell uses blank glyph */
+    vdp9958_render_line(v, 0, pixels);
+    assert(vdp9958_width(v) == 256);
+    assert(pixels[7] == 0x0000u); /* Eight-pixel text left margin */
+    assert(pixels[8] == 0xffffu); /* First glyph foreground pixel */
+    assert(pixels[14] == 0x0000u);/* Glyph width exactly six pixels */
     vdp9958_free(v);
     puts("V9958 register/VRAM/palette/command tests passed");
     return 0;

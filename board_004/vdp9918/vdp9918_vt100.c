@@ -442,7 +442,7 @@ void vdp9918_vt100_write(char * data)
 
 void vdp9918_vt100_init(void)
 {
-    vpd9918_text_mode_init();
+    vdp9918_text_mode_init();
 
     cursor_enabled = TRUE;
     scroll_enabled = TRUE;

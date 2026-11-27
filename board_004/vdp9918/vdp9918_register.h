@@ -23,7 +23,7 @@ void vdp_init(void);
 
 void vdp_send_bytes(uint8_t *buffer, uint16_t len);
 
-void vpd_send_bytes_repeat(uint8_t value, uint16_t len);
+void vdp_send_bytes_repeat(uint8_t value, uint16_t len);
 
 void vdp_set_address(uint16_t address);
 

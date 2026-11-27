@@ -9,12 +9,12 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 static uint16_t prev_text_address;
-static uint16_t prev_fore_colout;
+static uint16_t prev_fore_colour;
 static uint16_t prev_back_colour;
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-void vpd9918_text_mode_init(void)
+void vdp9918_text_mode_init(void)
 {
     prev_text_address = 0xFFFF;
 
@@ -28,7 +28,7 @@ void vpd9918_text_mode_init(void)
     vdp_set_pattern_table_address(TMS_VRAM_PATT_ADDRESS);
     vdp_set_sprite_attr_table_address(TMS_VRAM_SPRITE_ATTR_ADDRESS);
     vdp_set_sprite_patt_table_address(TMS_VRAM_SPRITE_PATT_ADDRESS);
-    vdp_set_reg_colour(TMS_COLOUR_WHITE, TMS_COLOUR_LT_BLUE);
+    vdp_set_reg_colour(TMS_COLOUR_WHITE, TMS_COLOUR_DK_BLUE);
 
     vdp_load_characters();
 
@@ -63,7 +63,7 @@ void vdp9918_text_set_cursor_shape(uint8_t shape)
     }
 
     vdp_set_glyph_pattern(VDP_CURSOR_GLYPH, pattern);
-    prev_text_address = 0x0FFFF;
+    prev_text_address = 0xFFFF;
 }
 
 void vdp9918_text_clear_screen(void)
@@ -71,8 +71,8 @@ void vdp9918_text_clear_screen(void)
     uint16_t total_char = TMS9918_TEXT_COLS * TMS9918_TEXT_ROWS;
 
     vdp_set_address(TMS_VRAM_NAME_ADDRESS);
-    prev_text_address = 0x0FFFF;
-    vpd_send_bytes_repeat(0x00, total_char);
+    prev_text_address = 0xFFFF;
+    vdp_send_bytes_repeat(0x00, total_char);
 }
 
 void vdp9918_text_clear_line(uint16_t char_posx, uint16_t char_posy)
@@ -81,8 +81,8 @@ void vdp9918_text_clear_line(uint16_t char_posx, uint16_t char_posy)
     uint16_t total_char = TMS9918_TEXT_COLS - char_posx;
 
     vdp_set_address(char_addr);
-    prev_text_address = 0x0FFFF;
-    vpd_send_bytes_repeat(0x00, total_char);
+    prev_text_address = 0xFFFF;
+    vdp_send_bytes_repeat(0x00, total_char);
 }
 
 void vdp9918_text_string_out(const char * text, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colour, uint16_t back_colour, bool_t is_transparent)
@@ -93,7 +93,7 @@ void vdp9918_text_string_out(const char * text, uint16_t char_posx, uint16_t cha
 
     len = (uint16_t)strlen(text);
     vdp_set_address(char_addr);
-    prev_text_address = 0x0FFFF;
+    prev_text_address = 0xFFFF;
 
     for (index = 0; index < len; index++)
     {

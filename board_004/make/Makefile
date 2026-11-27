@@ -88,7 +88,7 @@ CINCDIR += ../framework
 CINCDIR += ../source
 CINCDIR += ../cli
 CINCDIR += ../graphics
-CINCDIR += ../vpd9918
+CINCDIR += ../vdp9918
 CINCDIR += ../vdp9958
 
 # End of include section
@@ -118,9 +118,9 @@ SRC += ../framework/vt100_input.c
 
 SRC += ../cli/cli.c
 
-SRC += ../vpd9918/vdp9918_register.c
-SRC += ../vpd9918/vdp9918_driver.c
-SRC += ../vpd9918/vdp9918_vt100.c
+SRC += ../vdp9918/vdp9918_register.c
+SRC += ../vdp9918/vdp9918_driver.c
+SRC += ../vdp9918/vdp9918_vt100.c
 ifeq ($(USE_V9958),1)
 SRC += ../vdp9958/vdp9958_driver.c
 endif

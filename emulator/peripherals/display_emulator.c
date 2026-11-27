@@ -105,7 +105,7 @@ static void mouse_driver_event_mouse( uint32_t window_id, int32_t deltax, int32_
 #define VDP_SCREEN_OFFSET_X     0
 #define VDP_SCREEN_OFFSET_Y     0
 
-static void display_emulator_vpd9918_process( uint32_t window_id )
+static void display_emulator_vdp9918_process( uint32_t window_id )
 {
     uint8_t line_buffer[ TMS9918_PIXELS_X ];
     uint16_t vdp_posy;
@@ -255,7 +255,7 @@ static void display_emulator_process( uint32_t window_id )
     }
     else
     {
-        display_emulator_vpd9918_process(window_id);
+        display_emulator_vdp9918_process(window_id);
     }
 #endif
 }

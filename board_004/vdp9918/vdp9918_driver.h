@@ -19,13 +19,13 @@ enum
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-void vpd9918_text_mode_init(void);
+void vdp9918_text_mode_init(void);
 
 void vdp9918_text_set_cursor_shape(uint8_t shape);
 
 void vdp9918_text_clear_screen(void);
 
-void vdp9918_text_char_out(char c_out, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colout, uint16_t back_colout, bool_t is_transparent);
+void vdp9918_text_char_out(char c_out, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colour, uint16_t back_colour, bool_t is_transparent);
 void vdp9918_text_string_out(const char * text, uint16_t char_posx, uint16_t char_posy, uint16_t fore_colour, uint16_t back_colour, bool_t is_transparent);
 
 uint32_t vdp9918_get_text_height(char * text);

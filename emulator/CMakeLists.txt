@@ -24,6 +24,16 @@ if(NOT M68K_DATA_BUS_WIDTH STREQUAL "8" AND NOT M68K_DATA_BUS_WIDTH STREQUAL "16
 endif()
 add_definitions(-DM68K_DATA_BUS_WIDTH=${M68K_DATA_BUS_WIDTH})
 
+# Select the Yamaha V9958 or preserve the existing TMS9918 peripheral.
+# V9958 is wired as four consecutive 8-bit ports on Board 004.
+option(M68K_VIDEO_V9958 "Use Yamaha V9958 video" OFF)
+if(M68K_VIDEO_V9958)
+    if(NOT M68K_DATA_BUS_WIDTH STREQUAL "8")
+        message(FATAL_ERROR "Board 004 V9958 wiring requires an 8-bit CPU bus")
+    endif()
+    add_definitions(-DM68K_VIDEO_V9958=1)
+endif()
+
 # A 68008 uses the 68000 instruction/core model. Set this option to use
 # Musashi's 68010 core while retaining the separately-selected bus width.
 option(M68K_EMULATE_68010 "Use Musashi MC68010 CPU model" OFF)
@@ -94,6 +104,7 @@ set(                SOURCE_FILES
                     ./peripherals/ym2149_emulator.c
                     ./peripherals/keyboard_matrix_emulator.c
                     ./peripherals/vdp9918_emulator.c
+                    ./peripherals/vdp9958_emulator.c
                     
                     ./sdl/sdl_input.c
                     ./sdl/sdl_main.c
@@ -107,4 +118,10 @@ add_executable (    ${MODULE_NAME}
 
 target_link_libraries(${MODULE_NAME} SDL2 SDL2main m dl)
 
-# TODO: Add tests and install targets if needed.
+# The V9958 core can be exercised headlessly, without SDL or m68k-gcc.
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(vdp9958_test ./../tests/vdp9958_test.c ./peripherals/vdp9958_emulator.c)
+    target_include_directories(vdp9958_test PRIVATE ./peripherals)
+    add_test(NAME vdp9958_core COMMAND vdp9958_test)
+endif()

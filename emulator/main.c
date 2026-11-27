@@ -18,7 +18,7 @@
 
 #include "memory_map.h"
 
-#define BINARY_FILE         "/home/marcio/Projects/emulators/m68k_emulator/board_004/make/m68k_rom.bin"
+#define BINARY_FILE         "board_004/make/m68k_rom.bin"
 
 #ifndef M68K_EMULATE_68010
 #define M68K_EMULATE_68010 0
@@ -54,10 +54,33 @@ int main(int argc, char * argv[])
     void * p_uart_port1;
     void * p_ym2149;
 
-    (void)argc;
-    (void)argv;
+    const char *rom_filename = BINARY_FILE;
+    int arg_index;
+    FILE *rom_check;
+    uint32_t window_id;
 
-    uint32_t window_id = display_emulator_init();
+    for (arg_index = 1; arg_index < argc; ++arg_index)
+    {
+        if ((strcmp(argv[arg_index], "--rom") == 0 ||
+             strcmp(argv[arg_index], "-r") == 0) && arg_index + 1 < argc)
+        {
+            rom_filename = argv[++arg_index];
+        }
+        else
+        {
+            fprintf(stderr, "Usage: %s [--rom path/to/m68k_rom.bin]\n", argv[0]);
+            return 2;
+        }
+    }
+    rom_check = fopen(rom_filename, "rb");
+    if (!rom_check)
+    {
+        fprintf(stderr, "Cannot open M68K ROM image: %s\n", rom_filename);
+        return 1;
+    }
+    fclose(rom_check);
+
+    window_id = display_emulator_init();
 
     p_duart0 = m68681_emulator_init(M68681_0_ADDR);
     p_duart1 = m68681_emulator_init(M68681_1_ADDR);
@@ -88,7 +111,7 @@ int main(int argc, char * argv[])
     /* Host time source feeding the MC68681 counter/timer emulation. */
     system_timer_init();
 
-    bus_ctrl_load_rom(BINARY_FILE);
+    bus_ctrl_load_rom(rom_filename);
 
     m68k_init();
 #if M68K_EMULATE_68010

@@ -11,6 +11,7 @@
 #include "io_ctrl.h"
 
 #include "vdp9918_emulator.h"
+#include "vdp9958_emulator.h"
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -88,6 +89,9 @@ static const uint16_t tms9918_palette[16] =
 
 static do_events_t local_do_event;
 static VrEmuTms9918 * vdp9918;
+#ifdef M68K_VIDEO_V9958
+static Vdp9958 *vdp9958;
+#endif
 static uint8_t video_mode;
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -200,8 +204,51 @@ static void display_emulator_vga_process( uint32_t window_id )
     }
 }
 
+#ifdef M68K_VIDEO_V9958
+static void display_emulator_vdp9958_process(uint32_t window_id)
+{
+    display_data_t *display_data = (display_data_t *)sdl_window_get_user_data(window_id);
+    uint16_t line_buffer[VDP9958_WIDTH_MAX];
+    unsigned width, height, scale, offset_x, offset_y, y, x, sy, sx;
+
+    local_do_event(window_id);
+    if (++display_data->delay_counter < SDL_SCAN_COUNTER)
+        return;
+    display_data->delay_counter = 0;
+
+    width = vdp9958_width(vdp9958);
+    height = vdp9958_height(vdp9958);
+    scale = SDL_SCREEN_WIDTH / width;
+    if (scale > SDL_SCREEN_HEIGHT / height)
+        scale = SDL_SCREEN_HEIGHT / height;
+    if (scale == 0)
+        scale = 1;
+    offset_x = (SDL_SCREEN_WIDTH - width * scale) / 2;
+    offset_y = (SDL_SCREEN_HEIGHT - height * scale) / 2;
+
+    memset(display_data->lcd_buffer, 0, SDL_SCREEN_WIDTH * SDL_SCREEN_HEIGHT * sizeof(uint16_t));
+    for (y = 0; y < height; ++y)
+    {
+        vdp9958_render_line(vdp9958, y, line_buffer);
+        for (sy = 0; sy < scale; ++sy)
+        {
+            uint16_t *dst = display_data->lcd_buffer
+                          + (offset_y + y * scale + sy) * SDL_SCREEN_WIDTH + offset_x;
+            for (x = 0; x < width; ++x)
+                for (sx = 0; sx < scale; ++sx)
+                    *dst++ = line_buffer[x];
+        }
+    }
+    vdp9958_frame_complete(vdp9958);
+    sdl_update_window(window_id);
+}
+#endif
+
 static void display_emulator_process( uint32_t window_id )
 {
+#ifdef M68K_VIDEO_V9958
+    display_emulator_vdp9958_process(window_id);
+#else
     if (video_mode == 0)
     {
         display_emulator_vga_process(window_id);
@@ -210,6 +257,7 @@ static void display_emulator_process( uint32_t window_id )
     {
         display_emulator_vpd9918_process(window_id);
     }
+#endif
 }
 
 static uint32_t display_register_access(uint32_t address, uint32_t data, uint8_t size, uint8_t access)
@@ -217,6 +265,14 @@ static uint32_t display_register_access(uint32_t address, uint32_t data, uint8_t
     uint32_t vdp_address = address - VDP_CONTROL_ADDR;
     uint32_t ret = 0;
 
+#ifdef M68K_VIDEO_V9958
+    if (size != 1 || vdp_address > 3)
+        return 0xFF;
+    if (access == BUS_ACCESS_READ)
+        return vdp9958_port_read(vdp9958, (unsigned)vdp_address);
+    vdp9958_port_write(vdp9958, (unsigned)vdp_address, (uint8_t)data);
+    return 0;
+#else
     switch (vdp_address)
     {
         case 0:
@@ -254,6 +310,7 @@ static uint32_t display_register_access(uint32_t address, uint32_t data, uint8_t
     }
 
     return ret;
+#endif
 }
 
 uint32_t display_emulator_init( void )
@@ -273,7 +330,15 @@ uint32_t display_emulator_init( void )
     }
 
     video_mode = 1;
+#ifdef M68K_VIDEO_V9958
+    vdp9958 = vdp9958_new();
+    if (vdp9958 == NULL)
+        return NEG_U32;
+#else
     vdp9918 = vrEmuTms9918New();
+    if (vdp9918 == NULL)
+        return NEG_U32;
+#endif
 
     display_data->window_id = window_id;
     display_data->lcd_buffer = sdl_get_buffer( display_data->window_id );
@@ -293,6 +358,9 @@ uint32_t display_emulator_init( void )
     io_ctrl_set_handler( VDP_CONTROL_ADDR + 0, display_register_access );
     io_ctrl_set_handler( VDP_CONTROL_ADDR + 1, display_register_access );
     io_ctrl_set_handler( VDP_CONTROL_ADDR + 2, display_register_access );
+#ifdef M68K_VIDEO_V9958
+    io_ctrl_set_handler( VDP_CONTROL_ADDR + 3, display_register_access );
+#endif
 
     return display_data->window_id;
 }
